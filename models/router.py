@@ -1,5 +1,7 @@
 from typing import Dict, List
 from models.link import Link
+from models.lsdb import LSDB
+from models.routing_table import RoutingTable
 
 class Router:
     def __init__(self, router_id: str):
@@ -13,8 +15,8 @@ class Router:
         self.interfaces: List[Link] = []     
         
         # LSDB và Routing Table sẽ được khởi tạo chi tiết ở các bước sau
-        self.lsdb = {}
-        self.routing_table = {}
+        self.lsdb = LSDB()
+        self.routing_table = RoutingTable()
 
     def add_interface(self, link: Link):
         """Thêm một đường truyền (interface) vào router."""
