@@ -1,0 +1,23 @@
+class Link:
+    def __init__(self, source_id: str, dest_id: str, bandwidth_mbps: float, delay: float = 1.0):
+        self.source_id = source_id
+        self.dest_id = dest_id
+        self.bandwidth = bandwidth_mbps  # Đơn vị: Mbps
+        self.delay = delay
+        self.state = "UP"
+        
+        # Reference bandwidth mặc định của OSPF là 100 Mbps
+        self.reference_bandwidth = 100.0 
+        self.cost = self._calculate_cost()
+
+    def _calculate_cost(self) -> int:
+        """Tính toán metric cost dựa trên bandwidth."""
+        if self.bandwidth <= 0:
+            return float('inf')
+        
+        # OSPF Cost = Reference Bandwidth / Interface Bandwidth
+        cost = int(self.reference_bandwidth / self.bandwidth)
+        return cost if cost > 0 else 1  # Cost tối thiểu là 1
+
+    def __repr__(self):
+        return f"Link({self.source_id} -> {self.dest_id}, Cost: {self.cost})"
