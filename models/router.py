@@ -2,6 +2,7 @@ from typing import Dict, List
 from models.link import Link
 from models.lsdb import LSDB
 from models.routing_table import RoutingTable
+from algorithms.dijkstra import calculate_spf, get_path
 
 class Router:
     def __init__(self, router_id: str):
@@ -30,3 +31,38 @@ class Router:
 
     def __repr__(self):
         return f"Router(ID: {self.router_id}, Neighbors: {list(self.neighbors.keys())})"
+
+    def generate_routing_table(self, graph: Dict[str, Dict[str, int]]):
+        """
+        Chạy thuật toán Dijkstra và cập nhật Bảng định tuyến (Routing Table).
+        """
+        # 1. Chạy thuật toán để lấy danh sách cost và node liền trước
+        distances, previous_nodes = calculate_spf(graph, self.router_id)
+        
+        # Xóa bảng định tuyến cũ để tạo mới
+        self.routing_table.entries.clear() 
+
+        # 2. Duyệt qua từng đích đến để xây bảng định tuyến
+        for dest_id, total_cost in distances.items():
+            # Bỏ qua chính nó hoặc các node không thể tới được (cost = vô cực)
+            if dest_id == self.router_id or total_cost == float('inf'):
+                continue
+                
+            # 3. Trích xuất đường đi đầy đủ
+            path = get_path(previous_nodes, self.router_id, dest_id)
+            if not path:
+                continue
+                
+            # 4. Xác định Next-hop (trạm kế tiếp)
+            # Nếu đường đi là [R1, R3, R2], thì next_hop từ R1 là R3 (phần tử index 1)
+            next_hop = path[1] if len(path) > 1 else dest_id
+            
+            # 5. Lưu vào Bảng định tuyến
+            self.routing_table.add_route(
+                destination=dest_id, 
+                next_hop=next_hop, 
+                total_cost=total_cost, 
+                path=path
+            )
+        print(f"[Router {self.router_id}] Cập nhật xong Bảng định tuyến!")
+
