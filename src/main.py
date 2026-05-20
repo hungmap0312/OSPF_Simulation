@@ -1,34 +1,38 @@
 import sys
 import os
 
-# Thêm thư mục gốc vào sys.path để Python nhận diện được module 'models'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.router import Router
 from models.link import Link
+from models.topology import Topology
 
 def main():
-    print("=== Khởi tạo OSPF Simulation ===")
+    print("=== 1. Khởi tạo Topology OSPF ===")
+    topo = Topology()
     
-    # 1. Tạo 2 Router
+    # Tạo 3 Router
     r1 = Router("1.1.1.1")
     r2 = Router("2.2.2.2")
+    r3 = Router("3.3.3.3")
     
-    # 2. Tạo đường truyền FastEthernet (100 Mbps) giữa R1 và R2
-    link_r1_to_r2 = Link(source_id=r1.router_id, dest_id=r2.router_id, bandwidth_mbps=100.0)
-    link_r2_to_r1 = Link(source_id=r2.router_id, dest_id=r1.router_id, bandwidth_mbps=100.0)
+    # Nạp Router vào Topology
+    topo.add_router(r1)
+    topo.add_router(r2)
+    topo.add_router(r3)
     
-    # 3. Gắn đường truyền vào Router
-    r1.add_interface(link_r1_to_r2)
-    r2.add_interface(link_r2_to_r1)
+    print("\n=== 2. Kết nối các Router ===")
+    # Nối R1 và R2 bằng cáp xịn (FastEthernet - 100 Mbps) -> Cost dự kiến: 1
+    topo.add_link(Link(source_id="1.1.1.1", dest_id="2.2.2.2", bandwidth_mbps=100.0))
+    topo.add_link(Link(source_id="2.2.2.2", dest_id="1.1.1.1", bandwidth_mbps=100.0))
     
-    # 4. Mô phỏng quá trình khám phá Neighbor (Neighbor Discovery)
-    r1.add_neighbor(r2.router_id)
-    r2.add_neighbor(r1.router_id)
+    # Nối R2 và R3 bằng cáp chậm (Ethernet - 10 Mbps) -> Cost dự kiến: 10
+    topo.add_link(Link(source_id="2.2.2.2", dest_id="3.3.3.3", bandwidth_mbps=10.0))
+    topo.add_link(Link(source_id="3.3.3.3", dest_id="2.2.2.2", bandwidth_mbps=10.0))
     
-    print("\n=== Trạng thái hiện tại ===")
-    print(r1)
-    print(r2)
+    print("\n=== 3. Kết quả Đồ thị kề (Adjacency Graph) ===")
+    for r_id, neighbors in topo.adjacency_graph.items():
+        print(f"Router {r_id} kết nối với: {neighbors}")
 
 if __name__ == "__main__":
     main()
