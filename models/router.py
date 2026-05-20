@@ -2,6 +2,7 @@ from typing import Dict, List
 from models.link import Link
 from models.lsdb import LSDB
 from models.routing_table import RoutingTable
+from models.packet import HelloPacket
 from algorithms.dijkstra import calculate_spf, get_path
 
 class Router:
@@ -23,6 +24,25 @@ class Router:
         """Thêm một đường truyền (interface) vào router."""
         self.interfaces.append(link)
         print(f"[Router {self.router_id}] Added interface to {link.dest_id} with cost {link.cost}")
+
+    def generate_hello(self) -> HelloPacket:
+        """Tạo gói tin Hello mang theo danh sách láng giềng hiện tại."""
+        return HelloPacket(sender_id=self.router_id, known_neighbors=list(self.neighbors.keys()))
+
+    def receive_hello(self, packet: HelloPacket):
+        """Xử lý khi nhận được gói tin Hello từ một Router khác."""
+        sender = packet.sender_id
+        
+        # 1. Nếu đây là lần đầu nghe thấy láng giềng này -> Chuyển trạng thái INIT
+        if sender not in self.neighbors:
+            self.neighbors[sender] = "INIT"
+            print(f"[Router {self.router_id}] Đã nhận HELLO từ {sender} -> Trạng thái: INIT")
+            
+        # 2. Nếu thấy ID của mình trong gói Hello của đối phương -> Chuyển trạng thái FULL (2-WAY)
+        if self.router_id in packet.known_neighbors:
+            if self.neighbors[sender] != "FULL":
+                self.neighbors[sender] = "FULL"
+                print(f"[Router {self.router_id}] Thấy ID của mình trong HELLO của {sender} -> Trạng thái: FULL")
 
     def add_neighbor(self, neighbor_id: str):
         """Khởi tạo một neighbor mới với trạng thái ban đầu."""
