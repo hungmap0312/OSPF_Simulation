@@ -3,6 +3,7 @@ from models.link import Link
 from models.lsdb import LSDB
 from models.routing_table import RoutingTable
 from models.packet import HelloPacket
+from models.lsa import LSA
 from algorithms.dijkstra import calculate_spf, get_path
 
 class Router:
@@ -19,6 +20,7 @@ class Router:
         # LSDB và Routing Table sẽ được khởi tạo chi tiết ở các bước sau
         self.lsdb = LSDB()
         self.routing_table = RoutingTable()
+        self.lsa_seq_num = 0  # ĐẾM VERSION CỦA LSA
 
     def add_interface(self, link: Link):
         """Thêm một đường truyền (interface) vào router."""
@@ -44,6 +46,26 @@ class Router:
                 self.neighbors[sender] = "FULL"
                 print(f"[Router {self.router_id}] Thấy ID của mình trong HELLO của {sender} -> Trạng thái: FULL")
 
+    def generate_lsa(self):
+        """Tạo bản tin LSA chứa thông tin các đường truyền hiện tại của Router."""
+        self.lsa_seq_num += 1
+        link_info = {}
+        # Đóng gói thông tin các láng giềng trực tiếp và cost tương ứng
+        for link in self.interfaces:
+            link_info[link.dest_id] = link.cost
+        
+        lsa = LSA(adv_router=self.router_id, seq_num=self.lsa_seq_num, link_info=link_info)
+        # Tự lưu vào LSDB của chính mình trước tiên
+        self.lsdb.update_lsa(lsa)
+        return lsa
+
+    def receive_lsa(self, lsa) -> bool:
+        """Nhận LSA từ mạng. Trả về True nếu đây là LSA mới (để tiếp tục Flooding)."""
+        is_new = self.lsdb.update_lsa(lsa)
+        if is_new:
+            print(f"[Router {self.router_id}] Cập nhật LSDB: Nhận LSA mới từ {lsa.adv_router} (Seq: {lsa.seq_num})")
+        return is_new
+    
     def add_neighbor(self, neighbor_id: str):
         """Khởi tạo một neighbor mới với trạng thái ban đầu."""
         self.neighbors[neighbor_id] = "INIT"

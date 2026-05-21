@@ -41,5 +41,18 @@ class Topology:
             return list(self.adjacency_graph[router_id].keys())
         return []
 
+    def flood_lsa(self, source_router_id: str, lsa):
+        """Mô phỏng LSA Flooding: Lan truyền LSA tới tất cả láng giềng."""
+        neighbors = self.get_neighbor_list(source_router_id)
+        for neighbor_id in neighbors:
+            if neighbor_id in self.routers:
+                # Gửi LSA cho láng giềng
+                is_new = self.routers[neighbor_id].receive_lsa(lsa)
+                
+                # NẾU Láng giềng thấy đây là LSA mới, nó sẽ tự động flood tiếp cho các node khác
+                if is_new:
+                    print(f"  -> [Mạng] {neighbor_id} flood tiếp LSA của {lsa.adv_router}")
+                    self.flood_lsa(neighbor_id, lsa)
+    
     def __repr__(self):
         return f"Topology(Routers: {len(self.routers)}, Links: {len(self.links)})"

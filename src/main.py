@@ -3,30 +3,31 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.router import Router
+from models.link import Link
+from models.topology import Topology
 
 def main():
-    print("=== MÔ PHỎNG OSPF NEIGHBOR DISCOVERY ===")
-    r1 = Router("R1")
-    r2 = Router("R2")
+    print("=== MÔ PHỎNG OSPF LSA FLOODING ===")
+    topo = Topology()
     
-    print("\n--- BƯỚC 1: R1 gửi Hello đầu tiên ---")
-    hello_r1 = r1.generate_hello()
-    print(f"R1 phát: {hello_r1}")
-    r2.receive_hello(hello_r1)  # R2 nhận
-    print(f"Trạng thái láng giềng R2: {r2.neighbors}")
+    # 1. Tạo 3 Router: R1 nối R2, R2 nối R3 (R1 và R3 không nối trực tiếp)
+    r1, r2, r3 = Router("R1"), Router("R2"), Router("R3")
+    topo.add_router(r1); topo.add_router(r2); topo.add_router(r3)
     
-    print("\n--- BƯỚC 2: R2 gửi Hello phản hồi ---")
-    # Lúc này R2 đã biết R1, nên danh sách known_neighbors của R2 sẽ có 'R1'
-    hello_r2 = r2.generate_hello()
-    print(f"R2 phát: {hello_r2}")
-    r1.receive_hello(hello_r2)  # R1 nhận
-    print(f"Trạng thái láng giềng R1: {r1.neighbors}")
+    topo.add_link(Link("R1", "R2", 100.0)); topo.add_link(Link("R2", "R1", 100.0))
+    topo.add_link(Link("R2", "R3", 50.0));  topo.add_link(Link("R3", "R2", 50.0))
     
-    print("\n--- BƯỚC 3: R1 gửi Hello xác nhận lại ---")
-    hello_r1_v2 = r1.generate_hello()
-    print(f"R1 phát: {hello_r1_v2}")
-    r2.receive_hello(hello_r1_v2) # R2 nhận
-    print(f"Trạng thái láng giềng R2: {r2.neighbors}")
+    print("\n--- BƯỚC 1: R1 SINH LSA VÀ FLOOD VÀO MẠNG ---")
+    # R1 tự tạo bản tin LSA của mình (mang thông tin nối với R2)
+    lsa_r1 = r1.generate_lsa()
+    print(f"R1 phát: {lsa_r1}")
+    
+    # R1 bắt đầu flood qua Topology
+    topo.flood_lsa(source_router_id="R1", lsa=lsa_r1)
+    
+    print("\n--- BƯỚC 2: KIỂM TRA LSDB CỦA R3 ---")
+    # Dù R1 và R3 không nối trực tiếp, R3 vẫn phải có LSA của R1 nhờ R2 flood hộ
+    r3.lsdb.display()
 
 if __name__ == "__main__":
     main()
