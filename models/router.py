@@ -10,7 +10,7 @@ class Router:
     def __init__(self, router_id: str):
         self.router_id = router_id
         self.state = "ACTIVE"
-        
+
         # Neighbor Table: Lưu trữ trạng thái của các router láng giềng
         self.neighbors: Dict[str, str] = {}  
         
@@ -21,11 +21,41 @@ class Router:
         self.lsdb = LSDB()
         self.routing_table = RoutingTable()
         self.lsa_seq_num = 0  # ĐẾM VERSION CỦA LSA
+        self.spf_tree = {}    # Lưu trữ cây SPF Tree (Giai đoạn 2.1)
+        self.spf_runs = 0     # Đếm số lần chạy thuật toán SPF
 
     def add_interface(self, link: Link):
         """Thêm một đường truyền (interface) vào router."""
         self.interfaces.append(link)
         print(f"[Router {self.router_id}] Added interface to {link.dest_id} with cost {link.cost}")
+
+    def remove_interface(self, dest_id: str):
+        """Gỡ bỏ kết nối khi có sự cố đứt cáp và sinh LSA mới."""
+        self.interfaces = [link for link in self.interfaces if link.dest_id != dest_id]
+        if dest_id in self.neighbors:
+            del self.neighbors[dest_id]
+        print(f"[Router {self.router_id}] Đã gỡ bỏ interface tới {dest_id}. Đang sinh LSA mới...")
+        return self.generate_lsa()
+
+    def build_graph_from_lsdb(self) -> Dict[str, Dict[str, int]]:
+        """Xây dựng lại đồ thị mạng cục bộ từ kho LSDB của chính router này."""
+        graph = {}
+        
+        # 1. Nạp tất cả thông tin đã biết từ LSDB vào đồ thị
+        for adv_router, lsa in self.lsdb.lsas.items():
+            graph[adv_router] = lsa.link_info
+            
+        # 2. Đảm bảo bản thân router luôn là 1 đỉnh (node) trong đồ thị (tránh KeyError)
+        if self.router_id not in graph:
+            graph[self.router_id] = {}
+            
+        # 3. Đảm bảo mọi neighbor xuất hiện trong các LSA đều có mặt như một đỉnh
+        for lsa in self.lsdb.lsas.values():
+            for neighbor in lsa.link_info.keys():
+                if neighbor not in graph:
+                    graph[neighbor] = {}
+                    
+        return graph
 
     def generate_hello(self) -> HelloPacket:
         """Tạo gói tin Hello mang theo danh sách láng giềng hiện tại."""
@@ -64,6 +94,12 @@ class Router:
         is_new = self.lsdb.update_lsa(lsa)
         if is_new:
             print(f"[Router {self.router_id}] Cập nhật LSDB: Nhận LSA mới từ {lsa.adv_router} (Seq: {lsa.seq_num})")
+            
+            # --- 4.4. SPF Recalculation: Tự động chạy lại Dijkstra khi có thay đổi Topology ---
+            print(f"[Router {self.router_id}] Kích hoạt SPF Recalculation...")
+            local_graph = self.build_graph_from_lsdb()
+            self.generate_routing_table(local_graph)
+            
         return is_new
     
     def add_neighbor(self, neighbor_id: str):
@@ -78,9 +114,12 @@ class Router:
         """
         Chạy thuật toán Dijkstra và cập nhật Bảng định tuyến (Routing Table).
         """
+        self.spf_runs += 1    # Mỗi lần gọi hàm là tăng bộ đếm lên 1
+
         # 1. Chạy thuật toán để lấy danh sách cost và node liền trước
         distances, previous_nodes = calculate_spf(graph, self.router_id)
-        
+        self.spf_tree = previous_nodes # Lưu trữ SPF Tree
+
         # Xóa bảng định tuyến cũ để tạo mới
         self.routing_table.entries.clear() 
 

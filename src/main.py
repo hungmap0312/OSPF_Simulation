@@ -1,5 +1,7 @@
 import sys
 import os
+import time
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.router import Router
@@ -7,27 +9,51 @@ from models.link import Link
 from models.topology import Topology
 
 def main():
-    print("=== MÔ PHỎNG OSPF LSA FLOODING ===")
+    print("=== MÔ PHỎNG HỘI TỤ MẠNG & THỐNG KÊ (PHASE 4.5) ===")
     topo = Topology()
-    
-    # 1. Tạo 3 Router: R1 nối R2, R2 nối R3 (R1 và R3 không nối trực tiếp)
     r1, r2, r3 = Router("R1"), Router("R2"), Router("R3")
     topo.add_router(r1); topo.add_router(r2); topo.add_router(r3)
     
+    # Thiết lập đường truyền
     topo.add_link(Link("R1", "R2", 100.0)); topo.add_link(Link("R2", "R1", 100.0))
-    topo.add_link(Link("R2", "R3", 50.0));  topo.add_link(Link("R3", "R2", 50.0))
+    topo.add_link(Link("R1", "R3", 50.0));  topo.add_link(Link("R3", "R1", 50.0))
+    topo.add_link(Link("R3", "R2", 50.0));  topo.add_link(Link("R2", "R3", 50.0))
     
-    print("\n--- BƯỚC 1: R1 SINH LSA VÀ FLOOD VÀO MẠNG ---")
-    # R1 tự tạo bản tin LSA của mình (mang thông tin nối với R2)
-    lsa_r1 = r1.generate_lsa()
-    print(f"R1 phát: {lsa_r1}")
+    print("\n--- ĐỒNG BỘ MẠNG BAN ĐẦU ---")
+    topo.flood_lsa("R1", r1.generate_lsa())
+    topo.flood_lsa("R2", r2.generate_lsa())
+    topo.flood_lsa("R3", r3.generate_lsa())
     
-    # R1 bắt đầu flood qua Topology
-    topo.flood_lsa(source_router_id="R1", lsa=lsa_r1)
+    # Reset biến đếm sau khi đồng bộ khởi tạo để chỉ tính riêng phần hội tụ sự cố
+    topo.flood_count = 0
+    r1.spf_runs = r2.spf_runs = r3.spf_runs = 0
+
+
+    print("\n--- BẮT ĐẦU SỰ CỐ ĐỨT CÁP R1 -> R2 ---")
     
-    print("\n--- BƯỚC 2: KIỂM TRA LSDB CỦA R3 ---")
-    # Dù R1 và R3 không nối trực tiếp, R3 vẫn phải có LSA của R1 nhờ R2 flood hộ
-    r3.lsdb.display()
+    # Bắt đầu bấm giờ
+    start_time = time.time()
+    
+    # Cắt đứt cáp (Hành động này sẽ tự động trigger Flooding và SPF Recalculation)
+    topo.remove_link("R1", "R2")
+    topo.remove_link("R2", "R1")
+    
+    # Kết thúc bấm giờ
+    end_time = time.time()
+    
+    # Tính thời gian bằng mili-giây (ms)
+    convergence_time_ms = (end_time - start_time) * 1000
+
+    print("\n=== KẾT QUẢ THỐNG KÊ HỘI TỤ (CONVERGENCE METRICS) ===")
+    print(f"1. Thời gian hội tụ (Convergence Time): {convergence_time_ms:.4f} ms")
+    print(f"2. Số lượng bản tin LSA lan truyền (Flooding Count): {topo.flood_count} gói")
+    print(f"3. Số lần chạy lại thuật toán Dijkstra (SPF Runs):")
+    print(f"   - Router R1: {r1.spf_runs} lần")
+    print(f"   - Router R2: {r2.spf_runs} lần")
+    print(f"   - Router R3: {r3.spf_runs} lần")
+    
+    print("\n[Bảng định tuyến của R1 sau khi hội tụ]")
+    r1.routing_table.display()
 
 if __name__ == "__main__":
     main()

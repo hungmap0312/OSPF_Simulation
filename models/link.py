@@ -19,5 +19,11 @@ class Link:
         cost = int(self.reference_bandwidth / self.bandwidth)
         return cost if cost > 0 else 1  # Cost tối thiểu là 1
 
+    def update_bandwidth(self, new_bandwidth: float):
+        """Cập nhật bandwidth và tính toán lại cost (Giai đoạn 2.2)."""
+        self.bandwidth = new_bandwidth
+        self.cost = self._calculate_cost()
+        print(f"[Link] Cập nhật bandwidth {self.source_id}->{self.dest_id}: Cost mới = {self.cost}")
+
     def __repr__(self):
         return f"Link({self.source_id} -> {self.dest_id}, Cost: {self.cost})"

@@ -13,6 +13,7 @@ class Topology:
         
         # Placeholder cho Event Queue (sẽ dùng ở Giai đoạn 5)
         self.event_queue = [] 
+        self.flood_count = 0  # Đếm số lần truyền LSA trong mạng
 
     def add_router(self, router: Router):
         """Thêm một Router vào hệ thống mạng."""
@@ -35,6 +36,34 @@ class Topology:
             
         print(f"[Topology] Added Link: {link.source_id} -> {link.dest_id} (Cost: {link.cost})")
 
+    def remove_link(self, source_id: str, dest_id: str):
+        """Mô phỏng sự cố đứt cáp (Link Failure - Giai đoạn 4.6)."""
+        # Xóa khỏi danh sách links
+        self.links = [link for link in self.links if not (link.source_id == source_id and link.dest_id == dest_id)]
+        
+        # Xóa khỏi đồ thị kề
+        if source_id in self.adjacency_graph and dest_id in self.adjacency_graph[source_id]:
+            del self.adjacency_graph[source_id][dest_id]
+            
+        # Báo cho Router nguồn gỡ interface và tự động flood LSA mới thông báo đứt cáp
+        if source_id in self.routers:
+            new_lsa = self.routers[source_id].remove_interface(dest_id)
+            if new_lsa:
+                self.flood_lsa(source_id, new_lsa)
+        print(f"[Topology] LINK FAILURE: Đã ngắt kết nối {source_id} -> {dest_id}")
+
+    def update_link_cost(self, source_id: str, dest_id: str, new_bandwidth: float):
+        """Mô phỏng sự kiện thay đổi băng thông (Cost Change - Giai đoạn 4.6)."""
+        for link in self.links:
+            if link.source_id == source_id and link.dest_id == dest_id:
+                link.update_bandwidth(new_bandwidth)
+                self.adjacency_graph[source_id][dest_id] = link.cost
+                # Báo cho Router nguồn sinh LSA mới cập nhật cost
+                if source_id in self.routers:
+                    new_lsa = self.routers[source_id].generate_lsa()
+                    self.flood_lsa(source_id, new_lsa)
+                break
+
     def get_neighbor_list(self, router_id: str) -> List[str]:
         """Lấy danh sách láng giềng của một router từ đồ thị kề."""
         if router_id in self.adjacency_graph:
@@ -46,6 +75,9 @@ class Topology:
         neighbors = self.get_neighbor_list(source_router_id)
         for neighbor_id in neighbors:
             if neighbor_id in self.routers:
+                # Ghi nhận 1 lần LSA được truyền qua link này
+                self.flood_count += 1
+
                 # Gửi LSA cho láng giềng
                 is_new = self.routers[neighbor_id].receive_lsa(lsa)
                 
