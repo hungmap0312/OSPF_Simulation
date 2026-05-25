@@ -139,11 +139,12 @@ class Router:
             next_hop = path[1] if len(path) > 1 else dest_id
             
             # 5. Lưu vào Bảng định tuyến
+            out_interface = f"eth-{next_hop}" # Định nghĩa tên cổng đầu ra dựa trên Next Hop
             self.routing_table.add_route(
                 destination=dest_id, 
                 next_hop=next_hop, 
                 total_cost=total_cost, 
-                path=path
+                path=path,
+                interface=out_interface
             )
         print(f"[Router {self.router_id}] Cập nhật xong Bảng định tuyến!")
-

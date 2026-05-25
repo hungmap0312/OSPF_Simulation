@@ -63,6 +63,37 @@ class Topology:
                     new_lsa = self.routers[source_id].generate_lsa()
                     self.flood_lsa(source_id, new_lsa)
                 break
+    
+    def remove_router(self, router_id: str):
+        """Mô phỏng sự cố hỏng hóc hoặc rút bớt thiết bị Router (Giai đoạn 2.3)."""
+        if router_id in self.routers:
+            # 1. Tìm các router láng giềng đang kết nối trực tiếp tới router này
+            affected_neighbors = self.get_neighbor_list(router_id)
+            
+            # 2. Xóa router khỏi danh sách quản lý
+            del self.routers[router_id]
+            if router_id in self.adjacency_graph:
+                del self.adjacency_graph[router_id]
+                
+            # 3. Xóa các đường link liên quan trong danh sách tổng
+            self.links = [link for link in self.links if link.source_id != router_id and link.dest_id != router_id]
+            
+            # 4. Cập nhật đồ thị kề của các láng giềng và yêu cầu họ flood LSA mới
+            for neighbor in affected_neighbors:
+                if neighbor in self.adjacency_graph and router_id in self.adjacency_graph[neighbor]:
+                    del self.adjacency_graph[neighbor][router_id]
+                    # Báo láng giềng gỡ interface và phát tán thông tin mạng thay đổi
+                    if neighbor in self.routers:
+                        new_lsa = self.routers[neighbor].remove_interface(router_id)
+                        self.flood_lsa(neighbor, new_lsa)
+                        
+            print(f"[Topology] ROUTER FAILURE: Router {router_id} đã dừng hoạt động và bị xóa khỏi mạng.")
+            self.broadcast_event(f"Router {router_id} DOWN")
+
+    def broadcast_event(self, event: str):
+        """Ghi nhận sự kiện hệ thống vào hàng đợi Event Queue (Giai đoạn 2.3)."""
+        self.event_queue.append(event)
+        print(f"[Event Queue] Ghi nhận sự kiện: {event}")
 
     def get_neighbor_list(self, router_id: str) -> List[str]:
         """Lấy danh sách láng giềng của một router từ đồ thị kề."""
