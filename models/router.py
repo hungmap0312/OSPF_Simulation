@@ -60,6 +60,10 @@ class Router:
         link_info = {link.dest_id: link.cost for link in self.interfaces}
         lsa = LSA(adv_router=self.router_id, seq_num=self.lsa_seq_num, link_info=link_info)
         self.lsdb.update_lsa(lsa)
+        # Tự động chạy lại thuật toán cho chính mình khi Topology cục bộ thay đổi
+        spf_log.info(f"[{self.router_id}] Tự kích hoạt SPF Recalculation do cáp thay đổi...")
+        local_graph = self.build_graph_from_lsdb()
+        self.generate_routing_table(local_graph)
         return lsa
 
     def receive_lsa(self, lsa) -> bool:
