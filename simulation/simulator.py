@@ -7,7 +7,7 @@ class Simulator:
     def __init__(self):
         self.event_queue = []   # Hàng đợi sự kiện (Priority Queue)
         self.current_time = 0.0 # Thời gian mô phỏng hiện tại (ms)
-        self.is_running = False
+        self.is_running = False # Trạng thái mô phỏng (đang chạy hay đã dừng)
 
     def schedule(self, delay: float, event_type: str, handler_func, **kwargs):
         """Lên lịch cho một sự kiện trong tương lai (Delayed propagation)."""

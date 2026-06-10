@@ -2,11 +2,11 @@ from utils.config import Config
 
 class Link:
     def __init__(self, source_id: str, dest_id: str, bandwidth_mbps: float, delay: float = Config.DEFAULT_LINK_DELAY):
-        self.source_id = source_id
-        self.dest_id = dest_id
+        self.source_id = source_id       # ID của Router nguồn
+        self.dest_id = dest_id           # ID của Router đích
         self.bandwidth = bandwidth_mbps  # Đơn vị: Mbps
-        self.delay = delay
-        self.state = "UP"
+        self.delay = delay               # Đơn vị: ms (mặc định 1ms)
+        self.state = "UP"                # Trạng thái của liên kết: "UP" (hoạt động) hoặc "DOWN" (đứt)
         
         self.reference_bandwidth = Config.REFERENCE_BANDWIDTH
         self.cost = self._calculate_cost()

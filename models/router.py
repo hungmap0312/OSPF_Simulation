@@ -9,27 +9,30 @@ from utils.logger import router_log, lsa_log, spf_log
 
 class Router:
     def __init__(self, router_id: str):
-        self.router_id = router_id
-        self.state = "ACTIVE"
-        self.neighbors: Dict[str, str] = {}  
-        self.interfaces: List[Link] = []     
-        self.lsdb = LSDB()
-        self.routing_table = RoutingTable()
-        self.lsa_seq_num = 0  
-        self.spf_tree = {}    
-        self.spf_runs = 0     
+        self.router_id = router_id              # ID duy nhất của Router
+        self.state = "ACTIVE"                   # Trạng thái của Router: "ACTIVE" hoặc "FAILED"
+        self.neighbors: Dict[str, str] = {}     # Lưu trữ trạng thái của từng neighbor: {neighbor_id: state}
+        self.interfaces: List[Link] = []        # Danh sách các interface (liên kết) của Router này
+        self.lsdb = LSDB()                      # Link-State Database (LSDB) của Router này
+        self.routing_table = RoutingTable()     # Bảng định tuyến của Router này
+        self.lsa_seq_num = 0                    # Sequence Number để đánh dấu phiên bản LSA mới nhất của chính Router này
+        self.spf_tree = {}                      # Cây SPF được xây dựng sau khi chạy thuật toán Dijkstra (dùng để sinh bảng định tuyến)
+        self.spf_runs = 0                       # Đếm số lần chạy thuật toán SPF (Dijkstra) để đánh giá hiệu quả khi có thay đổi topology
 
+    # Thêm một interface mới (liên kết) vào Router này
     def add_interface(self, link: Link):
         self.interfaces.append(link)
         router_log.debug(f"[{self.router_id}] Added interface to {link.dest_id} with cost {link.cost}")
 
-    def remove_interface(self, dest_id: str):
+    # Gỡ bỏ interface tới một neighbor (ví dụ khi cáp bị đứt)
+    def remove_interface(self, dest_id: str):   
         self.interfaces = [link for link in self.interfaces if link.dest_id != dest_id]
         if dest_id in self.neighbors:
             del self.neighbors[dest_id]
         router_log.warning(f"[{self.router_id}] Đã gỡ bỏ interface tới {dest_id}. Đang sinh LSA mới...")
         return self.generate_lsa()
 
+    # Xây dựng đồ thị kề từ LSDB để chạy thuật toán Dijkstra
     def build_graph_from_lsdb(self) -> Dict[str, Dict[str, int]]:
         graph = {}
         for adv_router, lsa in self.lsdb.lsas.items():
@@ -42,9 +45,11 @@ class Router:
                     graph[neighbor] = {}
         return graph
 
+    # Sinh gói Hello để quảng bá đến neighbors
     def generate_hello(self) -> HelloPacket:
         return HelloPacket(sender_id=self.router_id, known_neighbors=list(self.neighbors.keys()))
 
+    # Xử lý gói Hello nhận được từ neighbor
     def receive_hello(self, packet: HelloPacket):
         sender = packet.sender_id
         if sender not in self.neighbors:
@@ -55,6 +60,7 @@ class Router:
                 self.neighbors[sender] = "FULL"
                 router_log.info(f"[{self.router_id}] Thấy ID của mình trong HELLO của {sender} -> Trạng thái: FULL")
 
+    # Sinh LSA mới khi có thay đổi trong topology
     def generate_lsa(self):
         self.lsa_seq_num += 1
         link_info = {link.dest_id: link.cost for link in self.interfaces}
@@ -66,6 +72,7 @@ class Router:
         self.generate_routing_table(local_graph)
         return lsa
 
+    # Xử lý LSA nhận được từ neighbor
     def receive_lsa(self, lsa) -> bool:
         is_new = self.lsdb.update_lsa(lsa)
         if is_new:
@@ -74,7 +81,8 @@ class Router:
             local_graph = self.build_graph_from_lsdb()
             self.generate_routing_table(local_graph)
         return is_new
-    
+
+    # Thêm neighbor vào danh sách neighbor
     def add_neighbor(self, neighbor_id: str):
         self.neighbors[neighbor_id] = "INIT"
         router_log.info(f"[{self.router_id}] Discovered neighbor: {neighbor_id}")
@@ -82,6 +90,7 @@ class Router:
     def __repr__(self):
         return f"Router({self.router_id})"
 
+    # Sinh bảng định tuyến mới dựa trên LSDB và thuật toán Dijkstra
     def generate_routing_table(self, graph: Dict[str, Dict[str, int]]):
         self.spf_runs += 1    
         distances, previous_nodes = calculate_spf(graph, self.router_id)

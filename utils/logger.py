@@ -8,7 +8,7 @@ if not os.path.exists('logs'):
 
 def setup_logger(name, log_file, level=None):
     """Hàm khởi tạo các bộ logger chuyên biệt (Router, LSA, SPF, v.v.)"""
-    # Lấy mức độ hiển thị log từ file Config nếu không được chỉ định
+    #  Nếu không truyền level, sử dụng cấu hình mặc định từ Config
     if level is None:
         level = Config.LOG_LEVEL
 
@@ -23,14 +23,14 @@ def setup_logger(name, log_file, level=None):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     
-    # Tránh duplicate log nếu gọi hàm nhiều lần
+    # Tránh việc thêm nhiều handler nếu logger đã tồn tại (đặc biệt khi chạy nhiều lần trong cùng một phiên)
     if not logger.handlers:
         logger.addHandler(handler)
         logger.addHandler(console_handler)
 
     return logger
 
-# Khởi tạo các Logger độc lập theo yêu cầu Giai đoạn 5.3
+# Khởi tạo các logger chuyên biệt cho từng loại thông tin
 system_log = setup_logger('SYSTEM', 'system.log')
 router_log = setup_logger('ROUTER', 'router.log')
 lsa_log = setup_logger('LSA', 'lsa.log')

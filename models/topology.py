@@ -5,17 +5,19 @@ from utils.logger import system_log, error_log, lsa_log
 
 class Topology:
     def __init__(self, simulator=None):
-        self.routers: Dict[str, Router] = {} 
-        self.links: List[Link] = []          
-        self.adjacency_graph: Dict[str, Dict[str, int]] = {} 
-        self.simulator = simulator  # Kết nối với bộ lõi mô phỏng sự kiện
-        self.flood_count = 0  
+        self.routers: Dict[str, Router] = {}                    # Lưu trữ các Router trong mạng: {router_id: Router}
+        self.links: List[Link] = []                             # Lưu trữ các Link trong mạng (dùng để xây dựng đồ thị và tính toán SPF)
+        self.adjacency_graph: Dict[str, Dict[str, int]] = {}    # Đồ thị kề biểu diễn topology: {router_id: {neighbor_id: cost}}
+        self.simulator = simulator                              # Kết nối với bộ lõi mô phỏng sự kiện
+        self.flood_count = 0                                    # Đếm số lần flood LSA để đánh giá hiệu quả khi có thay đổi topology    
 
+    # Thêm một Router mới vào Topology
     def add_router(self, router: Router):
         self.routers[router.router_id] = router
         self.adjacency_graph[router.router_id] = {}
         system_log.info(f"Added Router: {router.router_id}")
 
+    # Thêm một Link mới vào Topology
     def add_link(self, link: Link):
         self.links.append(link)
         self.adjacency_graph[link.source_id][link.dest_id] = link.cost
@@ -24,6 +26,7 @@ class Topology:
             self.routers[link.source_id].add_neighbor(link.dest_id)
         system_log.info(f"Added Link: {link.source_id} -> {link.dest_id} (Cost: {link.cost})")
 
+    # Gỡ bỏ một Link khỏi Topology (ví dụ khi cáp bị đứt)
     def remove_link(self, source_id: str, dest_id: str):
         self.links = [link for link in self.links if not (link.source_id == source_id and link.dest_id == dest_id)]
         if source_id in self.adjacency_graph and dest_id in self.adjacency_graph[source_id]:
@@ -34,6 +37,7 @@ class Topology:
                 self.flood_lsa(source_id, new_lsa)
         error_log.warning(f"LINK FAILURE: Đã ngắt kết nối {source_id} -> {dest_id}")
 
+    # Cập nhật chi phí của một Link (ví dụ khi có sự cố làm giảm băng thông)
     def update_link_cost(self, source_id: str, dest_id: str, new_bandwidth: float):
         for link in self.links:
             if link.source_id == source_id and link.dest_id == dest_id:
@@ -44,6 +48,7 @@ class Topology:
                     self.flood_lsa(source_id, new_lsa)
                 break
     
+    # Gỡ bỏ một Router khỏi Topology (ví dụ khi Router sập)
     def remove_router(self, router_id: str):
         if router_id in self.routers:
             affected_neighbors = self.get_neighbor_list(router_id)
@@ -60,16 +65,19 @@ class Topology:
             error_log.warning(f"ROUTER FAILURE: Router {router_id} đã sập.")
             self.broadcast_event(f"Router {router_id} DOWN")
 
+    # Ghi nhận sự kiện quan trọng (ví dụ khi có sự cố xảy ra)
     def broadcast_event(self, event: str):
         system_log.info(f"Ghi nhận sự kiện: {event}")
 
+    # Lấy danh sách neighbors của một Router
     def get_neighbor_list(self, router_id: str) -> List[str]:
         if router_id in self.adjacency_graph:
             return list(self.adjacency_graph[router_id].keys())
         return []
 
+    # Hàm xử lý khi gói tin LSA thực sự đến Router đích sau một độ trễ vật lý.
     def _deliver_lsa(self, target_router_id: str, lsa):
-        """Hàm xử lý khi gói tin LSA thực sự 'chạm' đến Router đích sau một độ trễ vật lý."""
+        """Hàm xử lý khi gói tin LSA thực sự đến Router đích sau một độ trễ vật lý."""
         if target_router_id in self.routers:
             self.flood_count += 1
             is_new = self.routers[target_router_id].receive_lsa(lsa)
@@ -77,6 +85,7 @@ class Topology:
                 lsa_log.info(f"[Mạng] {target_router_id} flood tiếp LSA của {lsa.adv_router}")
                 self.flood_lsa(target_router_id, lsa)
 
+    # Lan truyền LSA bằng cách đẩy vào Simulator Queue (mô phỏng delay truyền dẫn).
     def flood_lsa(self, source_router_id: str, lsa):
         """Lan truyền LSA bằng cách đẩy vào Simulator Queue (mô phỏng delay truyền dẫn)."""
         neighbors = self.get_neighbor_list(source_router_id)

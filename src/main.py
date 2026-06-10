@@ -11,7 +11,7 @@ from utils.network_generator import create_10_node_network
 from simulation.chaos_monkey import ChaosMonkey
 
 def main():
-    system_log.info("Khởi động Giai đoạn 6: Mạng 10 Router & Chaos Monkey")
+    system_log.info("Khởi động: Mạng 10 Router & Chaos Monkey")
     
     # 1. Khởi tạo Simulator và Topology
     sim = Simulator()
@@ -20,7 +20,7 @@ def main():
     # 2. Sinh mạng 10 Router
     pos, original_links = create_10_node_network(topo)
     
-    # 3. Khởi tạo Kẻ phá hoại (Chưa hoạt động cho đến khi bấm nút)
+    # 3. Khởi tạo Chaos Monkey với danh sách các liên kết gốc để có thể gây ra sự cố và hồi phục một cách nhất quán.
     monkey = ChaosMonkey(topo, sim, original_links)
 
     # 4. Lên lịch khởi động mạng (Đồng loạt rải LSA ban đầu)
