@@ -1,12 +1,17 @@
 import logging
 import os
+from utils.config import Config
 
 # Đảm bảo thư mục logs tồn tại
 if not os.path.exists('logs'):
     os.makedirs('logs')
 
-def setup_logger(name, log_file, level=logging.DEBUG):
+def setup_logger(name, log_file, level=None):
     """Hàm khởi tạo các bộ logger chuyên biệt (Router, LSA, SPF, v.v.)"""
+    # Lấy mức độ hiển thị log từ file Config nếu không được chỉ định
+    if level is None:
+        level = Config.LOG_LEVEL
+
     formatter = logging.Formatter('%(asctime)s | %(levelname)s | [%(name)s] %(message)s', datefmt='%H:%M:%S')
 
     handler = logging.FileHandler(f'logs/{log_file}')        

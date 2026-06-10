@@ -1,6 +1,7 @@
 import heapq
 from simulation.event import Event
 from utils.logger import system_log
+from utils.config import Config
 
 class Simulator:
     def __init__(self):
@@ -30,7 +31,7 @@ class Simulator:
         event.handler_func(**event.kwargs)
         return True
 
-    def run(self, max_time: float = 10000.0):
+    def run(self, max_time: float = Config.SIMULATOR_MAX_TIME):
         """Chạy mô phỏng cho đến khi hết sự kiện hoặc đạt giới hạn thời gian."""
         self.is_running = True
         system_log.info(f"=== BẮT ĐẦU MÔ PHỎNG TỪ {self.current_time}ms ===")

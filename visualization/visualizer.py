@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
+from utils.config import Config
 
 class OSPFVisualizer:
     def __init__(self, topology, simulator, pos, chaos_monkey):
@@ -33,11 +34,11 @@ class OSPFVisualizer:
         if self.is_paused:
             print("\n[GUI] ĐÃ TẠM DỪNG mô phỏng.")
             self.btn_pause.label.set_text('Tiếp tục Mô phỏng')
-            self.btn_pause.color = 'lightblue'  # Đổi sang màu xanh nhạt khi đang dừng
+            self.btn_pause.color = 'lightblue'  
         else:
             print("\n[GUI] ĐANG CHẠY mô phỏng.")
             self.btn_pause.label.set_text('Tạm dừng Mô phỏng')
-            self.btn_pause.color = '0.85'  # '0.85' là mã màu xám nhạt mặc định của matplotlib
+            self.btn_pause.color = '0.85'  
 
         self.fig.canvas.draw_idle()
 
@@ -45,7 +46,7 @@ class OSPFVisualizer:
         self.chaos_monkey.is_active = not self.chaos_monkey.is_active
         if self.chaos_monkey.is_active:
             print("\n[GUI] Kích hoạt Chaos Monkey: Các sự cố đứt mạng và khôi phục sẽ xảy ra ngẫu nhiên!")
-            self.chaos_monkey.trigger_random_event() # Bắn phát súng đầu tiên
+            self.chaos_monkey.trigger_random_event() 
             self.btn_break.color = 'orange'
             self.btn_break.label.set_text('Tắt Sự Cố Ngẫu Nhiên')
         else:
@@ -64,7 +65,7 @@ class OSPFVisualizer:
                 self.simulator.step()
                 
         self.ax.clear()
-        self.ax.set_title(f"OSPF 10-Node Simulator | Thời gian: {self.simulator.current_time:.1f} ms", fontsize=15, fontweight='bold')
+        self.ax.set_title(f"OSPF {len(self.topology.routers)}-Node Simulator | Thời gian: {self.simulator.current_time:.1f} ms", fontsize=15, fontweight='bold')
         
         G = nx.Graph()
         for r_id in self.topology.routers:
@@ -87,14 +88,16 @@ class OSPFVisualizer:
             edge_widths = []
             for u, v in G.edges():
                 if (u, v) in active_edges:
-                    edge_colors.append('red'); edge_widths.append(4.0)
+                    edge_colors.append(Config.COLOR_ACTIVE_PATH)
+                    edge_widths.append(Config.ACTIVE_EDGE_WIDTH)
                 else:
-                    edge_colors.append('gray'); edge_widths.append(1.5)
+                    edge_colors.append(Config.COLOR_IDLE_PATH)
+                    edge_widths.append(Config.IDLE_EDGE_WIDTH)
 
-            node_colors = ['#FFD700' if node == 'R1' else '#87CEFA' for node in G.nodes()]
+            node_colors = [Config.COLOR_ROOT_NODE if node == 'R1' else Config.COLOR_NORMAL_NODE for node in G.nodes()]
             
-            nx.draw_networkx_nodes(G, self.pos, ax=self.ax, node_color=node_colors, node_size=1200, edgecolors='black')
-            nx.draw_networkx_labels(G, self.pos, ax=self.ax, font_size=10, font_weight='bold')
+            nx.draw_networkx_nodes(G, self.pos, ax=self.ax, node_color=node_colors, node_size=Config.NODE_SIZE, edgecolors='black')
+            nx.draw_networkx_labels(G, self.pos, ax=self.ax, font_size=Config.FONT_SIZE, font_weight='bold')
             nx.draw_networkx_edges(G, self.pos, ax=self.ax, width=edge_widths, edge_color=edge_colors)
             
             edge_labels = nx.get_edge_attributes(G, 'cost')
@@ -103,5 +106,5 @@ class OSPFVisualizer:
         self.ax.axis('off')
 
     def start(self):
-        self.anim = FuncAnimation(self.fig, self.update, interval=10, cache_frame_data=False)
+        self.anim = FuncAnimation(self.fig, self.update, interval=Config.ANIMATION_INTERVAL, cache_frame_data=False)
         plt.show()

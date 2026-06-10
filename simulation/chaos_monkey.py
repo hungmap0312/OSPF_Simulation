@@ -1,5 +1,6 @@
 import random
 from models.link import Link
+from utils.config import Config
 
 class ChaosMonkey:
     def __init__(self, topo, sim, original_links):
@@ -36,7 +37,10 @@ class ChaosMonkey:
             print(f"🛠️ [SỰ KIỆN MẠNG] HỒI PHỤC: Tuyến {src} <---> {dst} đã được nối lại!")
             print(f"{'='*50}\n")
             
-            bw = 100.0; dly = 1.0
+            # Lấy thông số băng thông và độ trễ từ liên kết gốc để đảm bảo tính nhất quán
+            bw = Config.REFERENCE_BANDWIDTH
+            dly = Config.DEFAULT_LINK_DELAY
+            
             for l in self.original_links:
                 if l.source_id == src and l.dest_id == dst:
                     bw = l.bandwidth; dly = l.delay; break
@@ -47,5 +51,6 @@ class ChaosMonkey:
             self.topo.flood_lsa(src, self.topo.routers[src].generate_lsa())
             self.topo.flood_lsa(dst, self.topo.routers[dst].generate_lsa())
 
-        next_delay = random.uniform(30.0, 100.0)
+        # Lên lịch sự kiện tiếp theo sau một khoảng thời gian ngẫu nhiên
+        next_delay = random.uniform(Config.CHAOS_MIN_DELAY, Config.CHAOS_MAX_DELAY)
         self.sim.schedule(next_delay, "CHAOS_MONKEY", self.trigger_random_event)
