@@ -44,21 +44,21 @@ conda activate ospf_sim
 ## HƯỚNG DẪN CHẠY CHƯƠNG TRÌNH
 Hệ thống cung cấp hai luồng thực thi chính, phục vụ cho các mục đích nghiên cứu và kiểm thử khác nhau. Đảm bảo terminal đang ở thư mục gốc của dự án trước khi thực thi lệnh.
 
-**Luồng 1: Vận hành chế độ Trực quan hóa và Tương tác (Giao diện người dùng)**
-Chế độ này khởi chạy đồ thị mạng với quy mô được định nghĩa trong tệp cấu hình, kết hợp bộ đếm thời gian thực và mô đun sự cố ngẫu nhiên.
-Chỉ lệnh thực thi: 
+### **Luồng 1: Vận hành chế độ Trực quan hóa và Tương tác (Giao diện người dùng)**
+- Chế độ này khởi chạy đồ thị mạng với quy mô được định nghĩa trong tệp cấu hình, kết hợp bộ đếm thời gian thực và mô đun sự cố ngẫu nhiên.
+- Lệnh thực thi: 
 ```
 python src/main.py
 ```
-Mô tả: Sau khi khởi chạy, một cửa sổ đồ họa sẽ xuất hiện. Người dùng có thể tương tác với hệ thống thông qua bảng điều khiển để tạo các sự cố ngắt kết nối mạng lưới và quan sát trực tiếp thuật toán định tuyến lại lưu lượng truyền dẫn.
+- Mô tả: Sau khi khởi chạy, một cửa sổ đồ họa sẽ xuất hiện. Người dùng có thể tương tác với hệ thống thông qua bảng điều khiển để tạo các sự cố ngắt kết nối mạng lưới và quan sát trực tiếp thuật toán định tuyến lại lưu lượng truyền dẫn.
 
-**Luồng 2: Vận hành chế độ Đánh giá Hiệu năng (Benchmark)**
-Chế độ này loại bỏ giao diện đồ họa, ép hệ thống tính toán với công suất tối đa trên các quy mô đồ thị mạng lớn (từ hàng chục đến hàng trăm bộ định tuyến) nhằm thu thập số liệu về thời gian xử lý thuật toán và mức độ tiêu thụ bộ nhớ (RAM).
-Chỉ lệnh thực thi:
-```HƯNG
+### **Luồng 2: Vận hành chế độ Đánh giá Hiệu năng (Benchmark)**
+- Chế độ này loại bỏ giao diện đồ họa, ép hệ thống tính toán với công suất tối đa trên các quy mô đồ thị mạng lớn (từ hàng chục đến hàng trăm bộ định tuyến) nhằm thu thập số liệu về thời gian xử lý thuật toán và mức độ tiêu thụ bộ nhớ (RAM).
+- Lệnh thực thi:
+```
 python tests/benchmark.py
 ```
-Mô tả: Kết quả phân tích sẽ được xuất trực tiếp ra màn hình dòng lệnh dưới dạng bảng thống kê. Đồng thời, hệ thống tự động kết xuất các biểu đồ đánh giá khả năng mở rộng (Scalability) dưới dạng tệp ảnh lưu tại thư mục logs.
+- Mô tả: Kết quả phân tích sẽ được xuất trực tiếp ra màn hình dòng lệnh dưới dạng bảng thống kê. Đồng thời, hệ thống tự động kết xuất các biểu đồ đánh giá khả năng mở rộng (Scalability) dưới dạng tệp ảnh lưu tại thư mục logs.
 
 ## NHÓM THỰC HIỆN
 Tài liệu và mã nguồn hệ thống được nghiên cứu, thiết kế và phát triển bởi:
